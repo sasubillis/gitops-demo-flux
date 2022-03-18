@@ -1,0 +1,77 @@
+apiVersion: source.toolkit.fluxcd.io/v1beta1
+kind: GitRepository
+metadata:
+  name: gitops-demo-app
+  namespace: flux-system
+spec:
+  interval: 30s
+  url: ssh://git@github.com/sasubillis/gitops-demo-app
+  ref:
+    branch: master
+  secretRef:
+    name: ssh-credentials
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+kind: Kustomization
+metadata:
+  name: gitops-demo-app
+  namespace: flux-system
+spec:
+  interval: 30s
+  sourceRef:
+    kind: GitRepository
+    name: gitops-demo-app
+  path: ./kustomize
+  prune: true
+  targetNamespace: default
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta1
+kind: ImagePolicy
+metadata:
+  name: image-repo-policy
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: gitops-demo-app
+  filterTags:
+    pattern: "^master-[a-f0-9]+-(?P<ts>[0-9]+)"
+    extract: "$ts"
+  policy:
+    numerical:
+      order: asc
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta1
+kind: ImageRepository
+metadata:
+  name: gitops-demo-app
+  namespace: flux-system
+spec:
+  image: sasubillis/gitops
+  interval: 1m
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta1
+kind: ImageUpdateAutomation
+metadata:
+  name: gitops-demo-app
+  namespace: flux-system
+spec:
+  interval: 1m
+  sourceRef:
+    kind: GitRepository
+    name: gitops-demo-app
+  git:
+    checkout:
+      ref:
+        branch: master
+    commit:
+      author:
+        email: fluxcdbot@users.noreply.github.com
+        name: fluxcdbot
+      messageTemplate: |
+        Automated image updated by Flux
+        [ci skip]
+    push:
+      branch: master
+  update:
+    path: ./kustomize
+    strategy: Setters
