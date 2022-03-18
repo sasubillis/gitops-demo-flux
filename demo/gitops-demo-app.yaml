@@ -5,7 +5,7 @@ metadata:
   namespace: flux-system
 spec:
   interval: 30s
-  url: ssh://git@github.com:sasubillis/gitops-demo-app
+  url: https://github.com/sasubillis/gitops-demo-app.git
   ref:
     branch: master
   secretRef:
